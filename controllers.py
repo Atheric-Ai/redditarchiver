@@ -129,8 +129,6 @@ def get_refresh_token():
             redirect_uri=redirect_uri,
             user_agent=user_agent
         )
-            user_agent=user_agent
-        )
         
         # Log code details (safely)
         if code:
