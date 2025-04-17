@@ -180,3 +180,7 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# Application data
+data/*.sqlite3
+data/*.db

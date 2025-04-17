@@ -133,12 +133,41 @@ if os.environ.get('ONLY_ALLOW_FROM'):
     config['app']['only-allow-from'] = os.environ.get('ONLY_ALLOW_FROM').split(',')
 config['runtime']['average'] = 30
 
+# Setup logging with fallback
 log = logging.getLogger('redditarchiver_main')
-log.setLevel(logging.INFO) # Define minimum severity here
-handler = RotatingFileHandler('./logs/main.log', maxBytes=1000000, backupCount=10) # Log file of 1 MB, 10 previous files kept
-formatter = logging.Formatter('[%(asctime)s][%(module)s][%(levelname)s] %(message)s', '%Y-%m-%d %H:%M:%S %z') # Custom line format and time format to include the module and delimit all of this well
-handler.setFormatter(formatter)
-log.addHandler(handler)
+log.setLevel(logging.INFO)  # Define minimum severity here
+
+# Create formatter
+formatter = logging.Formatter('[%(asctime)s][%(module)s][%(levelname)s] %(message)s', '%Y-%m-%d %H:%M:%S %z')
+
+# First try to set up file logging
+try:
+    # Check if logs directory exists, create if it doesn't
+    log_dir = './logs'
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir, exist_ok=True)
+        print(f"Created logs directory at {os.path.abspath(log_dir)}")
+    
+    # Create file handler
+    file_handler = RotatingFileHandler(
+        os.path.join(log_dir, 'main.log'),
+        maxBytes=1000000,
+        backupCount=10
+    )
+    file_handler.setFormatter(formatter)
+    log.addHandler(file_handler)
+    print("File logging configured successfully")
+    
+except Exception as e:
+    print(f"Warning: Could not set up file logging: {str(e)}")
+    print("Falling back to console logging only")
+
+# Always add console handler as backup
+console_handler = logging.StreamHandler(sys.stdout)
+console_handler.setFormatter(formatter)
+log.addHandler(console_handler)
+
+# Application startup banner
 log.info("+----------------------------------------+")
 log.info("|     ;;;;;                              |")
 log.info("|     ;;;;;         R e d d i t          |")
@@ -149,4 +178,5 @@ log.info("|      ':`                               |")
 log.info("+----------------------------------------+")
 python_version = sys.version.replace("\n", " ")
 log.info(f"Python version: {python_version}")
+log.info(f"Running with app URL: {config['app'].get('url', 'Not set')}")
 log.debug("Config: {}".format(str(config)))
