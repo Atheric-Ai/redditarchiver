@@ -39,8 +39,27 @@ def craft_authentication_url():
     """
     Makes the authentication URL, for the user to allow Reddit to read submissions through their account
     """
-    reddit = praw.Reddit(client_id=config['reddit']['client-id'], client_secret=config['reddit']['client-secret'], redirect_uri=f"{config['app']['url']}/token", user_agent=config['reddit']['agent'])
-    return reddit.auth.url(duration="permanent", scopes=['read'], state=flask.g.cookie)
+    redirect_uri = f"{config['app']['url']}/token"
+    log.info(f"OAuth: Using redirect URI: {redirect_uri}")
+    
+    try:
+        reddit = praw.Reddit(
+            client_id=config['reddit']['client-id'],
+            client_secret=config['reddit']['client-secret'],
+            redirect_uri=redirect_uri,
+            user_agent=config['reddit']['agent']
+        )
+        
+        # Log configuration details (safely)
+        log.info(f"OAuth: Client configured with redirect_uri={redirect_uri}")
+        log.info(f"OAuth: Using app URL from config: {config['app']['url']}")
+        
+        auth_url = reddit.auth.url(duration="permanent", scopes=['read'], state=flask.g.cookie)
+        log.info(f"OAuth: Generated authentication URL (truncated): {auth_url[:60]}...")
+        return auth_url
+    except Exception as e:
+        log.error(f"OAuth: Failed to create authentication URL: {str(e)}")
+        raise
 
 
 def get_refresh_token():
@@ -49,8 +68,31 @@ def get_refresh_token():
     (more info: https://praw.readthedocs.io/en/stable/getting_started/authentication.html)
     """
     code = flask.request.args.get('code')
-    reddit = praw.Reddit(client_id=config['reddit']['client-id'], client_secret=config['reddit']['client-secret'], redirect_uri=f"{config['app']['url']}/token", user_agent=config['reddit']['agent'])
-    return reddit.auth.authorize(code)
+    redirect_uri = f"{config['app']['url']}/token"
+    
+    log.info(f"OAuth: Processing token callback with redirect URI: {redirect_uri}")
+    
+    try:
+        reddit = praw.Reddit(
+            client_id=config['reddit']['client-id'],
+            client_secret=config['reddit']['client-secret'],
+            redirect_uri=redirect_uri,
+            user_agent=config['reddit']['agent']
+        )
+        
+        # Log code details (safely)
+        if code:
+            code_preview = code[:5] + "..." if len(code) > 8 else "invalid"
+            log.info(f"OAuth: Authorizing with code (preview): {code_preview}")
+        else:
+            log.error("OAuth: No code parameter received from Reddit")
+            raise ValueError("No code parameter received from Reddit")
+        
+        # Authorize with Reddit
+        return reddit.auth.authorize(code)
+    except Exception as e:
+        log.error(f"OAuth: Failed to exchange code for token: {str(e)}")
+        raise
 
 
 def status(job_id):
