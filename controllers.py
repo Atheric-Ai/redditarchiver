@@ -42,12 +42,16 @@ def craft_authentication_url():
     redirect_uri = f"{config['app']['url']}/token"
     log.info(f"OAuth: Using redirect URI: {redirect_uri}")
     
+    # Use explicit user agent that matches registered app name
+    user_agent = f"rarchiver v{config['app']['version']} (by u/ailothaen)"
+    log.info(f"OAuth: Using user agent: {user_agent}")
+    
     try:
         reddit = praw.Reddit(
             client_id=config['reddit']['client-id'],
             client_secret=config['reddit']['client-secret'],
             redirect_uri=redirect_uri,
-            user_agent=config['reddit']['agent']
+            user_agent=user_agent
         )
         
         # Log configuration details (safely)
@@ -72,12 +76,16 @@ def get_refresh_token():
     
     log.info(f"OAuth: Processing token callback with redirect URI: {redirect_uri}")
     
+    # Use explicit user agent that matches registered app name
+    user_agent = f"rarchiver v{config['app']['version']} (by u/ailothaen)"
+    log.info(f"OAuth: Using user agent: {user_agent}")
+    
     try:
         reddit = praw.Reddit(
             client_id=config['reddit']['client-id'],
             client_secret=config['reddit']['client-secret'],
             redirect_uri=redirect_uri,
-            user_agent=config['reddit']['agent']
+            user_agent=user_agent
         )
         
         # Log code details (safely)
