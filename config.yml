@@ -1,0 +1,12 @@
+app:
+  name: Reddit Archiver
+  url: "http://localhost:8000"
+  disable-recursion-limit: false
+reddit:
+  client-id: bjwa3s2wHKe_iCxzVtmSHA
+  client-secret: vNec3sIwSJk4m0_S62XRuSsO2H_c2A
+  root: 'https://www.reddit.com'
+paths:
+  output: output
+defaults:
+  dateformat: '%a %Y-%m-%d at %H:%M'
