@@ -75,10 +75,21 @@ def token():
     Interception of token given by Reddit
     """
     cookie = flask.request.args.get('state')
+    code = flask.request.args.get('code')
+    
+    # Detailed debug logging
+    log.info("=== OAUTH CALLBACK DEBUG ===")
+    log.info(f"Full request URL: {flask.request.url}")
+    log.info(f"State parameter: {cookie}")
+    log.info(f"Code parameter: {code}")
+    log.info(f"Current cookie: {flask.request.cookies.get('redditarchive_id', 'Not Set')}")
+    log.info(f"App URL in config: {config['app']['url']}")
+    log.info("==========================")
+    
     try:
         refresh_token = controllers.get_refresh_token()
-    except:
-        log.error(f'Reddit did not recognize the code for {cookie}')
+    except Exception as e:
+        log.error(f'Reddit did not recognize the code for {cookie}. Error: {str(e)}')
         return "Reddit did not recognize the code given. This should not happen.", 400
 
     log.info(f'Refresh token got for cookie {cookie}: {refresh_token}')
