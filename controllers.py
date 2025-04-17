@@ -11,6 +11,38 @@ import threading, secrets, logging, json, datetime, os
 log = logging.getLogger('redditarchiver_main')
 
 
+def get_oauth_redirect_uri():
+    """
+    Creates a consistent redirect URI for OAuth authentication
+    Ensures the URL is using HTTPS and properly formatted
+    """
+    if 'app' not in config or 'url' not in config['app']:
+        log.error("OAuth: Missing app.url in configuration")
+        raise ValueError("Missing app.url configuration")
+        
+    app_url = config['app']['url'].strip()
+    
+    # Validate URL format
+    if not app_url.startswith('https://'):
+        log.error(f"OAuth: Invalid URL protocol in {app_url} - must use HTTPS")
+        # Force HTTPS for security
+        if app_url.startswith('http://'):
+            app_url = 'https://' + app_url[7:]
+            log.warning(f"OAuth: Forced URL to HTTPS: {app_url}")
+        else:
+            raise ValueError(f"Invalid URL: {app_url} - must use HTTPS protocol")
+    
+    # Remove trailing slashes
+    while app_url.endswith('/'):
+        app_url = app_url[:-1]
+        
+    # Construct the redirect URI
+    redirect_uri = f"{app_url}/token"
+    log.info(f"OAuth: Generated redirect URI: {redirect_uri}")
+    
+    return redirect_uri
+
+
 def request():
     """
     Initiates a submission-saving request (= job)
@@ -39,14 +71,19 @@ def craft_authentication_url():
     """
     Makes the authentication URL, for the user to allow Reddit to read submissions through their account
     """
-    redirect_uri = f"{config['app']['url']}/token"
-    log.info(f"OAuth: Using redirect URI: {redirect_uri}")
-    
-    # Use explicit user agent that matches registered app name
-    user_agent = f"rarchiver v{config['app']['version']} (by u/ailothaen)"
-    log.info(f"OAuth: Using user agent: {user_agent}")
-    
     try:
+        # Get consistent redirect URI
+        redirect_uri = get_oauth_redirect_uri()
+        
+        # Use explicit user agent that matches registered app name
+        user_agent = f"rarchiver v{config['app']['version']} (by u/ailothaen)"
+        log.info(f"OAuth: Using user agent: {user_agent}")
+        
+        # Check for required Reddit credentials
+        if 'reddit' not in config or 'client-id' not in config['reddit'] or 'client-secret' not in config['reddit']:
+            log.error("OAuth: Missing Reddit API credentials in configuration")
+            raise ValueError("Missing Reddit API credentials")
+            
         reddit = praw.Reddit(
             client_id=config['reddit']['client-id'],
             client_secret=config['reddit']['client-secret'],
@@ -65,26 +102,33 @@ def craft_authentication_url():
         log.error(f"OAuth: Failed to create authentication URL: {str(e)}")
         raise
 
-
 def get_refresh_token():
     """
     Gets refresh token from the code given by Reddit
     (more info: https://praw.readthedocs.io/en/stable/getting_started/authentication.html)
     """
     code = flask.request.args.get('code')
-    redirect_uri = f"{config['app']['url']}/token"
-    
-    log.info(f"OAuth: Processing token callback with redirect URI: {redirect_uri}")
-    
-    # Use explicit user agent that matches registered app name
-    user_agent = f"rarchiver v{config['app']['version']} (by u/ailothaen)"
-    log.info(f"OAuth: Using user agent: {user_agent}")
+    log.info(f"OAuth: Starting token exchange process")
     
     try:
+        # Get consistent redirect URI
+        redirect_uri = get_oauth_redirect_uri()
+        
+        # Use explicit user agent that matches registered app name
+        user_agent = f"rarchiver v{config['app']['version']} (by u/ailothaen)"
+        log.info(f"OAuth: Using user agent: {user_agent}")
+        
+        # Check for required Reddit credentials
+        if 'reddit' not in config or 'client-id' not in config['reddit'] or 'client-secret' not in config['reddit']:
+            log.error("OAuth: Missing Reddit API credentials in configuration")
+            raise ValueError("Missing Reddit API credentials")
+            
         reddit = praw.Reddit(
             client_id=config['reddit']['client-id'],
             client_secret=config['reddit']['client-secret'],
             redirect_uri=redirect_uri,
+            user_agent=user_agent
+        )
             user_agent=user_agent
         )
         
