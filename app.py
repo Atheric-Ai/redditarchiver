@@ -124,6 +124,20 @@ def download(job_id):
     return flask.send_from_directory(os.path.join(os.getcwd(), 'output'), filename, as_attachment=True)
 
 
+@app.route("/debug-config")
+def debug_config():
+    """
+    Display current configuration (excluding sensitive values)
+    """
+    safe_config = {
+        'app': {
+            'url': config['app'].get('url'),
+            'name': config['app'].get('name'),
+            'version': config['app'].get('version')
+        }
+    }
+    return flask.jsonify(safe_config)
+
 
 # -------------------------- #
 # Schedulers                 #
