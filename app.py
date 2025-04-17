@@ -11,6 +11,14 @@ import logging, os, datetime
 app = flask.Flask(__name__)
 log = logging.getLogger('redditarchiver_main')
 
+# Ensure output directory exists
+output_path = os.path.join(os.getcwd(), 'output')
+if not os.path.exists(output_path):
+    os.makedirs(output_path, exist_ok=True)
+    log.info(f"Created output directory at {output_path}")
+else:
+    log.info(f"Using existing output directory at {output_path}")
+
 
 @app.before_request
 def before_request_callback():
@@ -80,16 +88,34 @@ def token():
     # Detailed debug logging
     log.info("=== OAUTH CALLBACK DEBUG ===")
     log.info(f"Full request URL: {flask.request.url}")
+    log.info(f"Request method: {flask.request.method}")
+    log.info(f"All query parameters: {dict(flask.request.args)}")
     log.info(f"State parameter: {cookie}")
     log.info(f"Code parameter: {code}")
     log.info(f"Current cookie: {flask.request.cookies.get('redditarchive_id', 'Not Set')}")
     log.info(f"App URL in config: {config['app']['url']}")
+    log.info(f"Referring URL: {flask.request.referrer}")
+    log.info(f"Request headers: {dict(flask.request.headers)}")
+    
+    # Verify the state parameter matches our cookie
+    current_cookie = flask.request.cookies.get('redditarchive_id', None)
+    if cookie != current_cookie:
+        log.error(f"State mismatch: State={cookie}, Cookie={current_cookie}")
+        log.info("==========================")
+        return "Authentication failed: state parameter does not match cookie.", 400
+    else:
+        log.info("State verification: PASSED ✓")
+    
+    # Configure redirect URI exactly as in Reddit app
+    redirect_uri = f"{config['app']['url']}/token"
+    log.info(f"Using redirect URI for token exchange: {redirect_uri}")
     log.info("==========================")
     
     try:
         refresh_token = controllers.get_refresh_token()
     except Exception as e:
         log.error(f'Reddit did not recognize the code for {cookie}. Error: {str(e)}')
+        log.error(f'Exception details: {type(e).__name__}: {str(e)}')
         return "Reddit did not recognize the code given. This should not happen.", 400
 
     log.info(f'Refresh token got for cookie {cookie}: {refresh_token}')
